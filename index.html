@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>人体痛みマップ</title>
+    <title>人体痛みマップ v0.13</title>
     <style>
         * {
             margin: 0;
@@ -352,9 +352,20 @@
                         <rect class="body-part" data-part="shin-right" x="177" y="480" width="45" height="100"/>
                     </g>
                 </svg>
+                <div style="position: absolute; bottom: 10px; right: 10px; font-size: 12px; color: #999;">v0.13</div>
             </div>
 
             <div class="controls">
+                <div class="control-group">
+                    <label for="personSelect">人物を選択:</label>
+                    <div style="display: flex; gap: 10px;">
+                        <select id="personSelect" class="body-part-select" style="flex: 1;">
+                            <option value="">人物を選択してください</option>
+                        </select>
+                        <button class="btn btn-secondary" id="addPersonBtn" style="width: auto; padding: 10px 15px;">新規追加</button>
+                    </div>
+                </div>
+
                 <div class="control-group">
                     <label for="bodyPartSelect">部位を選択:</label>
                     <select id="bodyPartSelect" class="body-part-select">
@@ -401,11 +412,12 @@
                 <div class="action-buttons">
                     <button class="btn btn-primary" id="saveBtn">保存</button>
                     <button class="btn btn-secondary" id="clearBtn">クリア</button>
+                    <button class="btn btn-secondary" id="deletePersonBtn">人物削除</button>
                 </div>
 
                 <div class="control-group">
-                    <label>保存済みマップ:</label>
-                    <div id="savedMaps"></div>
+                    <label>登録済み人物:</label>
+                    <div id="personList"></div>
                 </div>
             </div>
         </div>
@@ -416,12 +428,152 @@
         let painData = {};
         let currentView = 'front';
         let selectedPart = null;
+        let currentPerson = null;
+        let personsData = {};
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            loadSavedMaps();
+            loadPersonsData();
             initializeEventListeners();
             createHeadGrid();
+            initializeSampleData();
+            updatePersonList();
+        });
+
+        // Initialize sample data
+        function initializeSampleData() {
+            const saved = localStorage.getItem('personsData');
+            if (!saved) {
+                // サンプルデータを作成
+                personsData = {
+                    'Aさん': {},
+                    'Bさん': {},
+                    'Cさん': {}
+                };
+                savePersonsData();
+            }
+        }
+
+        // Load persons data from localStorage
+        function loadPersonsData() {
+            const saved = localStorage.getItem('personsData');
+            if (saved) {
+                personsData = JSON.parse(saved);
+            }
+            updatePersonSelect();
+        }
+
+        // Save persons data to localStorage
+        function savePersonsData() {
+            localStorage.setItem('personsData', JSON.stringify(personsData));
+            updatePersonSelect();
+            updatePersonList();
+        }
+
+        // Update person select dropdown
+        function updatePersonSelect() {
+            const select = document.getElementById('personSelect');
+            select.innerHTML = '<option value="">人物を選択してください</option>';
+            Object.keys(personsData).forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                if (name === currentPerson) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        }
+
+        // Update person list display
+        function updatePersonList() {
+            const container = document.getElementById('personList');
+            container.innerHTML = '';
+            Object.keys(personsData).forEach(name => {
+                const item = document.createElement('div');
+                item.className = 'saved-map-item';
+                const dataCount = Object.keys(personsData[name] || {}).length;
+                item.innerHTML = `
+                    <div style="font-weight: bold;">${name}</div>
+                    <div class="date-time">データ数: ${dataCount}件</div>
+                `;
+                item.addEventListener('click', () => loadPerson(name));
+                container.appendChild(item);
+            });
+        }
+
+        // Load person data
+        function loadPerson(name) {
+            if (personsData[name]) {
+                currentPerson = name;
+                painData = {...personsData[name]};
+                document.getElementById('personSelect').value = name;
+                
+                // Update all body parts
+                document.querySelectorAll('.body-part, .head-cell').forEach(part => {
+                    const partName = part.dataset.part;
+                    const painLevel = painData[partName] || 0;
+                    updatePartColor(part, painLevel);
+                });
+                
+                console.log(`Loaded person: ${name}`, painData);
+                alert(`${name}のデータを読み込みました`);
+            }
+        }
+
+        // Person select change handler
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('personSelect').addEventListener('change', function() {
+                if (this.value) {
+                    loadPerson(this.value);
+                }
+            });
+
+            // Add person button
+            document.getElementById('addPersonBtn').addEventListener('click', function() {
+                const name = prompt('新しい人物の名前を入力してください:');
+                if (name && name.trim()) {
+                    if (personsData[name]) {
+                        alert('その名前は既に登録されています');
+                    } else {
+                        personsData[name] = {};
+                        currentPerson = name;
+                        painData = {};
+                        savePersonsData();
+                        document.getElementById('personSelect').value = name;
+                        
+                        // Clear all body parts
+                        document.querySelectorAll('.body-part, .head-cell').forEach(part => {
+                            part.style.fill = '#f0f0f0';
+                        });
+                        
+                        alert(`${name}を追加しました`);
+                    }
+                }
+            });
+
+            // Delete person button
+            document.getElementById('deletePersonBtn').addEventListener('click', function() {
+                if (!currentPerson) {
+                    alert('削除する人物を選択してください');
+                    return;
+                }
+                
+                if (confirm(`${currentPerson}のデータを削除しますか？`)) {
+                    delete personsData[currentPerson];
+                    savePersonsData();
+                    currentPerson = null;
+                    painData = {};
+                    document.getElementById('personSelect').value = '';
+                    
+                    // Clear all body parts
+                    document.querySelectorAll('.body-part, .head-cell').forEach(part => {
+                        part.style.fill = '#f0f0f0';
+                    });
+                    
+                    alert('削除しました');
+                }
+            });
         });
 
         // Create 10x10 grid for head
@@ -563,25 +715,16 @@
 
         // Save button
         document.getElementById('saveBtn').addEventListener('click', function() {
-            const mapData = {
-                timestamp: new Date().toISOString(),
-                data: {...painData}  // データのコピーを保存
-            };
+            if (!currentPerson) {
+                alert('先に人物を選択してください');
+                return;
+            }
             
-            console.log('Saving data:', mapData);
+            personsData[currentPerson] = {...painData};
+            savePersonsData();
             
-            let savedMaps = JSON.parse(localStorage.getItem('painMaps') || '[]');
-            savedMaps.unshift(mapData);
-            // Keep only last 10 maps
-            savedMaps = savedMaps.slice(0, 10);
-            localStorage.setItem('painMaps', JSON.stringify(savedMaps));
-            
-            // 保存成功を確認
-            const saved = localStorage.getItem('painMaps');
-            console.log('Data saved to localStorage:', saved);
-            
-            loadSavedMaps();
-            alert('痛みマップを保存しました！\n保存データ数: ' + Object.keys(painData).length + '件');
+            console.log(`Saved data for ${currentPerson}:`, painData);
+            alert(`${currentPerson}のデータを保存しました！\n保存データ数: ${Object.keys(painData).length}件`);
         });
 
         // Clear button
@@ -600,33 +743,6 @@
             }
         });
 
-        function loadSavedMaps() {
-            const savedMaps = JSON.parse(localStorage.getItem('painMaps') || '[]');
-            const container = document.getElementById('savedMaps');
-            container.innerHTML = '';
-            
-            savedMaps.forEach((map, index) => {
-                const date = new Date(map.timestamp);
-                const item = document.createElement('div');
-                item.className = 'saved-map-item';
-                item.innerHTML = `
-                    <div>マップ ${index + 1}</div>
-                    <div class="date-time">${date.toLocaleDateString('ja-JP')} ${date.toLocaleTimeString('ja-JP')}</div>
-                `;
-                item.addEventListener('click', () => loadMap(map.data));
-                container.appendChild(item);
-            });
-        }
-
-        function loadMap(data) {
-            painData = data;
-            document.querySelectorAll('.body-part, .head-cell').forEach(part => {
-                const partName = part.dataset.part;
-                const painLevel = data[partName] || 0;
-                updatePartColor(part, painLevel);
-            });
-            console.log('Map loaded:', data);
-        }
 
         function initializeEventListeners() {
             // Initialize all parts with default color
