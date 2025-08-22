@@ -3,8 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>人体痛みマップ v0.27</title>
+    <title>人体痛みマップ v0.28</title>
     <style>
+        /* デバイス情報表示 */
+        .device-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 10px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .device-info.show {
+            display: block;
+        }
         * {
             margin: 0;
             padding: 0;
@@ -74,6 +91,93 @@
             display: flex;
             gap: 30px;
             align-items: flex-start;
+        }
+        
+        /* モバイル対応 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 15px;
+                border-radius: 10px;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+                margin-bottom: 15px;
+            }
+            
+            .version-badge {
+                font-size: 10px;
+                padding: 3px 8px;
+            }
+            
+            .main-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .body-view {
+                width: 100%;
+                min-height: 400px;
+            }
+            
+            .body-canvas {
+                height: 400px;
+            }
+            
+            .controls {
+                width: 100%;
+            }
+            
+            .view-tabs {
+                gap: 5px;
+                margin-bottom: 15px;
+            }
+            
+            .tab-button {
+                padding: 8px 15px;
+                font-size: 12px;
+            }
+            
+            .pain-btn {
+                padding: 10px;
+                font-size: 14px;
+            }
+            
+            .mode-toggle {
+                flex-direction: column;
+            }
+            
+            .mode-btn {
+                width: 100%;
+            }
+            
+            p {
+                font-size: 10px !important;
+            }
+        }
+        
+        /* 小型モバイル対応（iPhone SEなど） */
+        @media (max-width: 375px) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 1.2em;
+            }
+            
+            .body-canvas {
+                height: 350px;
+            }
+            
+            .tab-button {
+                padding: 6px 10px;
+                font-size: 11px;
+            }
         }
 
         .body-view {
@@ -370,10 +474,11 @@
 </head>
 <body>
     <div id="notification" class="notification"></div>
+    <div class="device-info" id="deviceInfo"></div>
     <div class="container">
         <h1>
             🏥 人体痛みマップ
-            <span class="version-badge">v0.27</span>
+            <span class="version-badge">v0.28</span>
         </h1>
         <p style="text-align: center; color: #666; margin-top: -20px; margin-bottom: 20px;">
             🖱️ ドラッグで矩形選択 | クリックで選択/解除 | Ctrl+クリックで追加 | 空白クリックで全解除
@@ -556,7 +661,76 @@
             updatePersonList();
             initializeDragSelection();
             initializeDateControls();
+            detectDevice();
         });
+        
+        // デバイス検出と表示
+        function detectDevice() {
+            const deviceInfo = document.getElementById('deviceInfo');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const userAgent = navigator.userAgent;
+            
+            let deviceType = 'Desktop';
+            let osType = 'Unknown';
+            
+            // OS判定
+            if (/iPhone|iPad|iPod/.test(userAgent)) {
+                osType = 'iOS';
+                deviceType = 'Mobile';
+            } else if (/Android/.test(userAgent)) {
+                osType = 'Android';
+                deviceType = 'Mobile';
+            } else if (/Windows/.test(userAgent)) {
+                osType = 'Windows';
+            } else if (/Mac/.test(userAgent)) {
+                osType = 'macOS';
+            }
+            
+            // 画面サイズでも判定
+            if (width <= 768) {
+                deviceType = 'Mobile';
+            } else if (width <= 1024) {
+                deviceType = 'Tablet';
+            }
+            
+            // デバッグ情報表示（開発時のみ）
+            const debugMode = localStorage.getItem('debugMode') === 'true';
+            if (debugMode) {
+                deviceInfo.innerHTML = `
+                    📱 ${deviceType} | ${osType}<br>
+                    📀 ${width} x ${height}px<br>
+                    🔍 DPR: ${window.devicePixelRatio}
+                `;
+                deviceInfo.classList.add('show');
+            }
+            
+            // モバイル用の調整
+            if (deviceType === 'Mobile') {
+                // タッチイベントを最適化
+                document.body.style.touchAction = 'pan-y';
+                
+                // SVGのサイズ調整
+                const svgElement = document.getElementById('bodySvg');
+                if (svgElement && width < 400) {
+                    svgElement.setAttribute('viewBox', '0 0 400 600');
+                    svgElement.style.maxWidth = '100%';
+                }
+            }
+            
+            console.log(`Device: ${deviceType}, OS: ${osType}, Screen: ${width}x${height}`);
+        }
+        
+        // ウィンドウサイズ変更時に再検出
+        window.addEventListener('resize', detectDevice);
+        
+        // デバッグモード切り替え（コンソールで toggleDebug() を実行）
+        window.toggleDebug = function() {
+            const current = localStorage.getItem('debugMode') === 'true';
+            localStorage.setItem('debugMode', !current);
+            detectDevice();
+            return `Debug mode: ${!current}`;
+        };
 
         // Initialize drag selection
         function initializeDragSelection() {
