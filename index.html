@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>人体痛みマップ v0.14</title>
+    <title>人体痛みマップ v0.15</title>
     <style>
         * {
             margin: 0;
@@ -312,33 +312,24 @@
                 <svg class="body-svg" viewBox="0 0 400 600" id="bodySvg">
                     <!-- Front View -->
                     <g id="front-view">
-                        <!-- Head with 10x10 grid -->
-                        <g id="head-grid-front">
-                            <!-- Head outline -->
-                            <ellipse fill="none" stroke="#999" stroke-width="1" cx="200" cy="80" rx="50" ry="60"/>
-                            <!-- Grid cells will be added by JavaScript -->
-                        </g>
-                        <!-- Neck -->
-                        <rect class="body-part" data-part="neck" x="180" y="130" width="40" height="30"/>
-                        <!-- Shoulders -->
-                        <rect class="body-part" data-part="left-shoulder" x="120" y="160" width="60" height="40"/>
-                        <rect class="body-part" data-part="right-shoulder" x="220" y="160" width="60" height="40"/>
-                        <!-- Arms -->
-                        <rect class="body-part" data-part="left-upper-arm" x="90" y="200" width="40" height="80"/>
-                        <rect class="body-part" data-part="right-upper-arm" x="270" y="200" width="40" height="80"/>
-                        <rect class="body-part" data-part="left-lower-arm" x="85" y="280" width="35" height="80"/>
-                        <rect class="body-part" data-part="right-lower-arm" x="280" y="280" width="35" height="80"/>
-                        <!-- Chest -->
-                        <rect class="body-part" data-part="chest" x="150" y="160" width="100" height="100"/>
-                        <!-- Abdomen -->
-                        <rect class="body-part" data-part="abdomen" x="150" y="260" width="100" height="80"/>
-                        <!-- Pelvis -->
-                        <rect class="body-part" data-part="pelvis" x="150" y="340" width="100" height="40"/>
-                        <!-- Legs -->
-                        <rect class="body-part" data-part="left-thigh" x="150" y="380" width="45" height="100"/>
-                        <rect class="body-part" data-part="right-thigh" x="205" y="380" width="45" height="100"/>
-                        <rect class="body-part" data-part="left-shin" x="152" y="480" width="40" height="100"/>
-                        <rect class="body-part" data-part="right-shin" x="208" y="480" width="40" height="100"/>
+                        <!-- All body parts will be generated as grids by JavaScript -->
+                        <!-- Head outline -->
+                        <ellipse fill="none" stroke="#999" stroke-width="1" cx="200" cy="80" rx="50" ry="60"/>
+                        <!-- Body outlines for visual reference -->
+                        <rect fill="none" stroke="#999" stroke-width="1" x="180" y="130" width="40" height="30"/>
+                        <rect fill="none" stroke="#999" stroke-width="1" x="120" y="160" width="60" height="40"/>
+                        <rect fill="none" stroke="#999" stroke-width="1" x="220" y="160" width="60" height="40"/>
+                        <rect fill="none" stroke="#999" stroke-width="1" x="90" y="200" width="40" height="80"/>
+                        <rect fill="none" stroke="#999" stroke-width="1" x="270" y="200" width="40" height="80"/>
+                        <rect fill="none" stroke="#999" stroke-width="1" x="85" y="280" width="35" height="80"/>
+                        <rect fill="none" stroke="#999" stroke-width="1" x="280" y="280" width="35" height="80"/>
+                        <rect fill="none" stroke="#999" stroke-width="1" x="150" y="160" width="100" height="100"/>
+                        <rect fill="none" stroke="#999" stroke-width="1" x="150" y="260" width="100" height="80"/>
+                        <rect fill="none" stroke="#999" stroke-width="1" x="150" y="340" width="100" height="40"/>
+                        <rect fill="none" stroke="#999" stroke-width="1" x="150" y="380" width="45" height="100"/>
+                        <rect fill="none" stroke="#999" stroke-width="1" x="205" y="380" width="45" height="100"/>
+                        <rect fill="none" stroke="#999" stroke-width="1" x="152" y="480" width="40" height="100"/>
+                        <rect fill="none" stroke="#999" stroke-width="1" x="208" y="480" width="40" height="100"/>
                     </g>
 
                     <!-- Back View (hidden by default) -->
@@ -386,7 +377,7 @@
                         <rect class="body-part" data-part="shin-right" x="177" y="480" width="45" height="100"/>
                     </g>
                 </svg>
-                <div style="position: absolute; bottom: 10px; right: 10px; font-size: 12px; color: #999;">v0.14</div>
+                <div style="position: absolute; bottom: 10px; right: 10px; font-size: 12px; color: #999;">v0.15</div>
                 <div id="selectionBox" class="selection-box"></div>
             </div>
 
@@ -702,47 +693,97 @@
             });
         });
 
-        // Create 10x10 grid for head
+        // Create grids for all body parts
         function createHeadGrid() {
-            const gridContainer = document.getElementById('head-grid-front');
-            const cx = 200;
-            const cy = 80;
-            const rx = 50;
-            const ry = 60;
+            createBodyGrids();
+        }
+
+        function createBodyGrids() {
+            const frontView = document.getElementById('front-view');
             
-            // Create grid cells
-            for (let row = 0; row < 10; row++) {
-                for (let col = 0; col < 10; col++) {
-                    // Calculate position within ellipse
-                    const x = cx - rx + (col * (rx * 2) / 10) + rx/10;
-                    const y = cy - ry + (row * (ry * 2) / 10) + ry/10;
-                    const cellWidth = (rx * 2) / 10;
-                    const cellHeight = (ry * 2) / 10;
+            // Define body parts with their bounds
+            const bodyParts = [
+                // Head (ellipse)
+                { name: 'head', type: 'ellipse', cx: 200, cy: 80, rx: 50, ry: 60, grid: 10 },
+                // Neck
+                { name: 'neck', type: 'rect', x: 180, y: 130, width: 40, height: 30, grid: 4 },
+                // Shoulders
+                { name: 'left-shoulder', type: 'rect', x: 120, y: 160, width: 60, height: 40, grid: 6 },
+                { name: 'right-shoulder', type: 'rect', x: 220, y: 160, width: 60, height: 40, grid: 6 },
+                // Arms
+                { name: 'left-upper-arm', type: 'rect', x: 90, y: 200, width: 40, height: 80, grid: 8 },
+                { name: 'right-upper-arm', type: 'rect', x: 270, y: 200, width: 40, height: 80, grid: 8 },
+                { name: 'left-lower-arm', type: 'rect', x: 85, y: 280, width: 35, height: 80, grid: 8 },
+                { name: 'right-lower-arm', type: 'rect', x: 280, y: 280, width: 35, height: 80, grid: 8 },
+                // Torso
+                { name: 'chest', type: 'rect', x: 150, y: 160, width: 100, height: 100, grid: 10 },
+                { name: 'abdomen', type: 'rect', x: 150, y: 260, width: 100, height: 80, grid: 10 },
+                { name: 'pelvis', type: 'rect', x: 150, y: 340, width: 100, height: 40, grid: 8 },
+                // Legs
+                { name: 'left-thigh', type: 'rect', x: 150, y: 380, width: 45, height: 100, grid: 10 },
+                { name: 'right-thigh', type: 'rect', x: 205, y: 380, width: 45, height: 100, grid: 10 },
+                { name: 'left-shin', type: 'rect', x: 152, y: 480, width: 40, height: 100, grid: 10 },
+                { name: 'right-shin', type: 'rect', x: 208, y: 480, width: 40, height: 100, grid: 10 }
+            ];
+
+            bodyParts.forEach(part => {
+                if (part.type === 'ellipse') {
+                    createEllipseGrid(frontView, part);
+                } else {
+                    createRectGrid(frontView, part);
+                }
+            });
+        }
+
+        function createEllipseGrid(container, part) {
+            const gridSize = part.grid;
+            for (let row = 0; row < gridSize; row++) {
+                for (let col = 0; col < gridSize; col++) {
+                    const x = part.cx - part.rx + (col * (part.rx * 2) / gridSize) + part.rx/gridSize;
+                    const y = part.cy - part.ry + (row * (part.ry * 2) / gridSize) + part.ry/gridSize;
+                    const cellWidth = (part.rx * 2) / gridSize;
+                    const cellHeight = (part.ry * 2) / gridSize;
                     
-                    // Check if cell center is within ellipse
                     const cellCenterX = x;
                     const cellCenterY = y;
-                    const normalizedX = (cellCenterX - cx) / rx;
-                    const normalizedY = (cellCenterY - cy) / ry;
+                    const normalizedX = (cellCenterX - part.cx) / part.rx;
+                    const normalizedY = (cellCenterY - part.cy) / part.ry;
                     
                     if (normalizedX * normalizedX + normalizedY * normalizedY <= 1) {
-                        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                        rect.setAttribute('class', 'head-cell');
-                        rect.setAttribute('data-part', `head-${row}-${col}`);
-                        rect.setAttribute('x', x - cellWidth/2);
-                        rect.setAttribute('y', y - cellHeight/2);
-                        rect.setAttribute('width', cellWidth);
-                        rect.setAttribute('height', cellHeight);
-                        rect.setAttribute('rx', '2');
-                        gridContainer.appendChild(rect);
-                        
-                        // Add event listener with multi-select support
-                        rect.addEventListener('click', function(e) {
-                            selectBodyPart(this.dataset.part, e.ctrlKey || e.metaKey);
-                        });
+                        createGridCell(container, part.name, row, col, x - cellWidth/2, y - cellHeight/2, cellWidth, cellHeight);
                     }
                 }
             }
+        }
+
+        function createRectGrid(container, part) {
+            const gridSize = part.grid;
+            const cellWidth = part.width / gridSize;
+            const cellHeight = part.height / gridSize;
+            
+            for (let row = 0; row < gridSize; row++) {
+                for (let col = 0; col < gridSize; col++) {
+                    const x = part.x + col * cellWidth;
+                    const y = part.y + row * cellHeight;
+                    createGridCell(container, part.name, row, col, x, y, cellWidth, cellHeight);
+                }
+            }
+        }
+
+        function createGridCell(container, partName, row, col, x, y, width, height) {
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('class', 'head-cell');
+            rect.setAttribute('data-part', `${partName}-${row}-${col}`);
+            rect.setAttribute('x', x);
+            rect.setAttribute('y', y);
+            rect.setAttribute('width', width);
+            rect.setAttribute('height', height);
+            rect.setAttribute('rx', '1');
+            container.appendChild(rect);
+            
+            rect.addEventListener('click', function(e) {
+                selectBodyPart(this.dataset.part, e.ctrlKey || e.metaKey);
+            });
         }
 
         // View tab switching
@@ -774,12 +815,7 @@
             }
         }
 
-        // Body part selection with multi-select
-        document.querySelectorAll('.body-part').forEach(part => {
-            part.addEventListener('click', function(e) {
-                selectBodyPart(this.dataset.part, e.ctrlKey || e.metaKey);
-            });
-        });
+        // Body part selection is now handled by grid cells
 
         function selectBodyPart(partName, multiSelect = false) {
             const part = document.querySelector(`[data-part="${partName}"]`);
