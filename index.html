@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>人体痛みマップ v0.17</title>
+    <title>人体痛みマップ v0.18</title>
     <style>
         * {
             margin: 0;
@@ -363,7 +363,7 @@
                         <rect class="body-part" data-part="shin-right" x="177" y="480" width="45" height="100"/>
                     </g>
                 </svg>
-                <div style="position: absolute; bottom: 10px; right: 10px; font-size: 12px; color: #999;">v0.17</div>
+                <div style="position: absolute; bottom: 10px; right: 10px; font-size: 12px; color: #999;">v0.18</div>
                 <div id="selectionBox" class="selection-box"></div>
             </div>
 
@@ -694,22 +694,23 @@
                 // Neck
                 { name: 'neck', type: 'rect', x: 180, y: 130, width: 40, height: 30, grid: 4 },
                 
-                // Upper body - shoulders to chest connection
-                { name: 'left-shoulder', type: 'rect', x: 120, y: 160, width: 60, height: 40, grid: 6 },
-                { name: 'right-shoulder', type: 'rect', x: 220, y: 160, width: 60, height: 40, grid: 6 },
+                // Upper body - shoulders
+                { name: 'left-shoulder', type: 'rect', x: 100, y: 160, width: 50, height: 40, grid: 5 },
+                { name: 'right-shoulder', type: 'rect', x: 250, y: 160, width: 50, height: 40, grid: 5 },
                 
-                // Arms - detailed
-                { name: 'left-upper-arm', type: 'rect', x: 90, y: 200, width: 40, height: 60, grid: 6 },
-                { name: 'left-elbow', type: 'rect', x: 90, y: 260, width: 40, height: 20, grid: 4 },
-                { name: 'left-forearm', type: 'rect', x: 85, y: 280, width: 35, height: 60, grid: 6 },
-                { name: 'left-wrist', type: 'rect', x: 85, y: 340, width: 35, height: 20, grid: 4 },
-                { name: 'left-hand', type: 'rect', x: 80, y: 360, width: 40, height: 40, grid: 5 },
+                // Left arm - continuous connection
+                { name: 'left-upper-arm', type: 'rect', x: 100, y: 200, width: 40, height: 60, grid: 6 },
+                { name: 'left-elbow', type: 'rect', x: 100, y: 260, width: 40, height: 20, grid: 4 },
+                { name: 'left-forearm', type: 'rect', x: 100, y: 280, width: 40, height: 60, grid: 6 },
+                { name: 'left-wrist', type: 'rect', x: 100, y: 340, width: 40, height: 20, grid: 4 },
+                { name: 'left-hand', type: 'rect', x: 95, y: 360, width: 50, height: 40, grid: 5 },
                 
-                { name: 'right-upper-arm', type: 'rect', x: 270, y: 200, width: 40, height: 60, grid: 6 },
-                { name: 'right-elbow', type: 'rect', x: 270, y: 260, width: 40, height: 20, grid: 4 },
-                { name: 'right-forearm', type: 'rect', x: 280, y: 280, width: 35, height: 60, grid: 6 },
-                { name: 'right-wrist', type: 'rect', x: 280, y: 340, width: 35, height: 20, grid: 4 },
-                { name: 'right-hand', type: 'rect', x: 280, y: 360, width: 40, height: 40, grid: 5 },
+                // Right arm - continuous connection
+                { name: 'right-upper-arm', type: 'rect', x: 260, y: 200, width: 40, height: 60, grid: 6 },
+                { name: 'right-elbow', type: 'rect', x: 260, y: 260, width: 40, height: 20, grid: 4 },
+                { name: 'right-forearm', type: 'rect', x: 260, y: 280, width: 40, height: 60, grid: 6 },
+                { name: 'right-wrist', type: 'rect', x: 260, y: 340, width: 40, height: 20, grid: 4 },
+                { name: 'right-hand', type: 'rect', x: 255, y: 360, width: 50, height: 40, grid: 5 },
                 
                 // Torso - detailed
                 { name: 'chest-upper', type: 'rect', x: 150, y: 160, width: 100, height: 50, grid: 10 },
@@ -748,19 +749,25 @@
         }
 
         function createEllipseGrid(container, part) {
-            const gridSize = part.grid;
-            // 正方形セルのサイズ（楕円の短い半径を基準に）
-            const cellSize = Math.min(part.rx * 2, part.ry * 2) / gridSize;
+            // 正方形セルのサイズを固定（5ピクセル）
+            const cellSize = 5;
             
-            for (let row = 0; row < gridSize; row++) {
-                for (let col = 0; col < gridSize; col++) {
-                    const x = part.cx - (gridSize * cellSize) / 2 + col * cellSize + cellSize/2;
-                    const y = part.cy - (gridSize * cellSize) / 2 + row * cellSize + cellSize/2;
+            // 楕円をカバーするグリッドの範囲を計算
+            const startX = part.cx - part.rx;
+            const endX = part.cx + part.rx;
+            const startY = part.cy - part.ry;
+            const endY = part.cy + part.ry;
+            
+            const colCount = Math.floor((endX - startX) / cellSize);
+            const rowCount = Math.floor((endY - startY) / cellSize);
+            
+            for (let row = 0; row < rowCount; row++) {
+                for (let col = 0; col < colCount; col++) {
+                    const x = startX + col * cellSize + cellSize/2;
+                    const y = startY + row * cellSize + cellSize/2;
                     
-                    const cellCenterX = x;
-                    const cellCenterY = y;
-                    const normalizedX = (cellCenterX - part.cx) / part.rx;
-                    const normalizedY = (cellCenterY - part.cy) / part.ry;
+                    const normalizedX = (x - part.cx) / part.rx;
+                    const normalizedY = (y - part.cy) / part.ry;
                     
                     // 楕円内にあるセルのみ作成
                     if (normalizedX * normalizedX + normalizedY * normalizedY <= 1) {
@@ -772,22 +779,18 @@
 
         function createRectGrid(container, part) {
             const gridSize = part.grid;
-            // 正方形セルのサイズを決定（小さい方の辺を基準に）
-            const cellSize = Math.min(part.width, part.height) / gridSize;
+            // 正方形セルのサイズを固定（5ピクセル）
+            const cellSize = 5;
             
-            // グリッドを中央に配置するためのオフセット
-            const offsetX = (part.width - cellSize * gridSize) / 2;
-            const offsetY = (part.height - cellSize * gridSize) / 2;
+            // 実際のグリッド数を計算
+            const colCount = Math.floor(part.width / cellSize);
+            const rowCount = Math.floor(part.height / cellSize);
             
-            for (let row = 0; row < gridSize; row++) {
-                for (let col = 0; col < gridSize; col++) {
-                    const x = part.x + offsetX + col * cellSize;
-                    const y = part.y + offsetY + row * cellSize;
-                    // ボディパーツの範囲内にあるセルのみ作成
-                    if (x >= part.x && x + cellSize <= part.x + part.width &&
-                        y >= part.y && y + cellSize <= part.y + part.height) {
-                        createGridCell(container, part.name, row, col, x, y, cellSize, cellSize);
-                    }
+            for (let row = 0; row < rowCount; row++) {
+                for (let col = 0; col < colCount; col++) {
+                    const x = part.x + col * cellSize;
+                    const y = part.y + row * cellSize;
+                    createGridCell(container, part.name, row, col, x, y, cellSize, cellSize);
                 }
             }
         }
