@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>人体痛みマップ v0.13</title>
+    <title>人体痛みマップ v0.14</title>
     <style>
         * {
             margin: 0;
@@ -260,11 +260,45 @@
             font-size: 12px;
             color: #888;
         }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            font-size: 16px;
+            font-weight: 600;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .selection-box {
+            position: absolute;
+            border: 2px dashed #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            pointer-events: none;
+            display: none;
+        }
     </style>
 </head>
 <body>
+    <div id="notification" class="notification"></div>
     <div class="container">
         <h1>🏥 人体痛みマップ</h1>
+        <p style="text-align: center; color: #666; margin-top: -20px; margin-bottom: 20px;">
+            Ctrl+クリック: 複数選択 | Shift+ドラッグ: 範囲選択
+        </p>
         
         <div class="view-tabs">
             <button class="tab-button active" data-view="front">前面</button>
@@ -352,7 +386,8 @@
                         <rect class="body-part" data-part="shin-right" x="177" y="480" width="45" height="100"/>
                     </g>
                 </svg>
-                <div style="position: absolute; bottom: 10px; right: 10px; font-size: 12px; color: #999;">v0.13</div>
+                <div style="position: absolute; bottom: 10px; right: 10px; font-size: 12px; color: #999;">v0.14</div>
+                <div id="selectionBox" class="selection-box"></div>
             </div>
 
             <div class="controls">
@@ -427,9 +462,22 @@
         // Pain map data storage
         let painData = {};
         let currentView = 'front';
-        let selectedPart = null;
+        let selectedParts = new Set();
         let currentPerson = null;
         let personsData = {};
+        let isSelecting = false;
+        let selectionStart = null;
+
+        // Show notification
+        function showNotification(message, duration = 2000) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, duration);
+        }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -438,7 +486,85 @@
             createHeadGrid();
             initializeSampleData();
             updatePersonList();
+            initializeDragSelection();
         });
+
+        // Initialize drag selection
+        function initializeDragSelection() {
+            const svgElement = document.getElementById('bodySvg');
+            const selectionBox = document.getElementById('selectionBox');
+            let startX, startY;
+
+            svgElement.addEventListener('mousedown', function(e) {
+                // Only start selection if shift key is held
+                if (!e.shiftKey) return;
+                
+                e.preventDefault();
+                isSelecting = true;
+                const rect = svgElement.getBoundingClientRect();
+                startX = e.clientX - rect.left;
+                startY = e.clientY - rect.top;
+                selectionStart = { x: startX, y: startY };
+                
+                selectionBox.style.left = startX + 'px';
+                selectionBox.style.top = startY + 'px';
+                selectionBox.style.width = '0px';
+                selectionBox.style.height = '0px';
+                selectionBox.style.display = 'block';
+            });
+
+            svgElement.addEventListener('mousemove', function(e) {
+                if (!isSelecting) return;
+                
+                const rect = svgElement.getBoundingClientRect();
+                const currentX = e.clientX - rect.left;
+                const currentY = e.clientY - rect.top;
+                
+                const width = Math.abs(currentX - startX);
+                const height = Math.abs(currentY - startY);
+                const left = Math.min(currentX, startX);
+                const top = Math.min(currentY, startY);
+                
+                selectionBox.style.left = left + 'px';
+                selectionBox.style.top = top + 'px';
+                selectionBox.style.width = width + 'px';
+                selectionBox.style.height = height + 'px';
+            });
+
+            svgElement.addEventListener('mouseup', function(e) {
+                if (!isSelecting) return;
+                
+                isSelecting = false;
+                selectionBox.style.display = 'none';
+                
+                // Select all parts within the selection box
+                const rect = svgElement.getBoundingClientRect();
+                const boxRect = selectionBox.getBoundingClientRect();
+                
+                document.querySelectorAll('.body-part, .head-cell').forEach(part => {
+                    const partRect = part.getBoundingClientRect();
+                    const partCenterX = partRect.left + partRect.width / 2;
+                    const partCenterY = partRect.top + partRect.height / 2;
+                    
+                    if (partCenterX >= boxRect.left && partCenterX <= boxRect.right &&
+                        partCenterY >= boxRect.top && partCenterY <= boxRect.bottom) {
+                        selectBodyPart(part.dataset.part, true);
+                    }
+                });
+                
+                if (selectedParts.size > 0) {
+                    showNotification(`${selectedParts.size}個の部位を選択しました`);
+                }
+            });
+
+            // Cancel selection on escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && isSelecting) {
+                    isSelecting = false;
+                    selectionBox.style.display = 'none';
+                }
+            });
+        }
 
         // Initialize sample data
         function initializeSampleData() {
@@ -517,7 +643,7 @@
                 });
                 
                 console.log(`Loaded person: ${name}`, painData);
-                alert(`${name}のデータを読み込みました`);
+                showNotification(`${name}のデータを読み込みました`);
             }
         }
 
@@ -534,7 +660,7 @@
                 const name = prompt('新しい人物の名前を入力してください:');
                 if (name && name.trim()) {
                     if (personsData[name]) {
-                        alert('その名前は既に登録されています');
+                        showNotification('その名前は既に登録されています');
                     } else {
                         personsData[name] = {};
                         currentPerson = name;
@@ -547,7 +673,7 @@
                             part.style.fill = '#f0f0f0';
                         });
                         
-                        alert(`${name}を追加しました`);
+                        showNotification(`${name}を追加しました`);
                     }
                 }
             });
@@ -555,7 +681,7 @@
             // Delete person button
             document.getElementById('deletePersonBtn').addEventListener('click', function() {
                 if (!currentPerson) {
-                    alert('削除する人物を選択してください');
+                    showNotification('削除する人物を選択してください');
                     return;
                 }
                 
@@ -571,7 +697,7 @@
                         part.style.fill = '#f0f0f0';
                     });
                     
-                    alert('削除しました');
+                    showNotification('削除しました');
                 }
             });
         });
@@ -610,9 +736,9 @@
                         rect.setAttribute('rx', '2');
                         gridContainer.appendChild(rect);
                         
-                        // Add event listener
-                        rect.addEventListener('click', function() {
-                            selectBodyPart(this.dataset.part);
+                        // Add event listener with multi-select support
+                        rect.addEventListener('click', function(e) {
+                            selectBodyPart(this.dataset.part, e.ctrlKey || e.metaKey);
                         });
                     }
                 }
@@ -648,48 +774,70 @@
             }
         }
 
-        // Body part selection
+        // Body part selection with multi-select
         document.querySelectorAll('.body-part').forEach(part => {
-            part.addEventListener('click', function() {
-                selectBodyPart(this.dataset.part);
+            part.addEventListener('click', function(e) {
+                selectBodyPart(this.dataset.part, e.ctrlKey || e.metaKey);
             });
         });
 
-        function selectBodyPart(partName) {
-            // Remove previous selection
-            document.querySelectorAll('.body-part, .head-cell').forEach(p => p.classList.remove('selected'));
-            
-            // Add selection to clicked part
+        function selectBodyPart(partName, multiSelect = false) {
             const part = document.querySelector(`[data-part="${partName}"]`);
-            if (part) {
+            if (!part) return;
+            
+            if (!multiSelect) {
+                // Single selection - clear previous selections
+                selectedParts.clear();
+                document.querySelectorAll('.body-part, .head-cell').forEach(p => p.classList.remove('selected'));
+            }
+            
+            if (selectedParts.has(partName)) {
+                // Deselect if already selected
+                selectedParts.delete(partName);
+                part.classList.remove('selected');
+            } else {
+                // Add to selection
+                selectedParts.add(partName);
                 part.classList.add('selected');
-                selectedPart = partName;
-                
-                // Update dropdown if it's a standard part
-                if (!partName.startsWith('head-')) {
-                    document.getElementById('bodyPartSelect').value = partName;
+            }
+            
+            // Update UI based on selection
+            if (selectedParts.size === 1) {
+                const singlePart = Array.from(selectedParts)[0];
+                if (!singlePart.startsWith('head-')) {
+                    document.getElementById('bodyPartSelect').value = singlePart;
                 } else {
                     document.getElementById('bodyPartSelect').value = '';
                 }
-                
-                // Load existing pain level for this part
-                const existingPain = painData[partName] || 0;
+                const existingPain = painData[singlePart] || 0;
                 document.getElementById('painSlider').value = existingPain;
                 document.getElementById('painValue').textContent = existingPain.toFixed(1);
-                updatePartColor(part, existingPain);
+            } else if (selectedParts.size > 1) {
+                document.getElementById('bodyPartSelect').value = '';
+                // Calculate average pain level for multiple parts
+                let totalPain = 0;
+                selectedParts.forEach(part => {
+                    totalPain += painData[part] || 0;
+                });
+                const avgPain = totalPain / selectedParts.size;
+                document.getElementById('painSlider').value = avgPain;
+                document.getElementById('painValue').textContent = avgPain.toFixed(1);
             }
         }
 
-        // Pain slider
+        // Pain slider - now works with multiple selected parts
         document.getElementById('painSlider').addEventListener('input', function() {
             const value = parseFloat(this.value);
             document.getElementById('painValue').textContent = value.toFixed(1);
             
-            if (selectedPart) {
-                painData[selectedPart] = value;
-                const part = document.querySelector(`[data-part="${selectedPart}"]`);
-                updatePartColor(part, value);
-            }
+            // Apply to all selected parts
+            selectedParts.forEach(partName => {
+                painData[partName] = value;
+                const part = document.querySelector(`[data-part="${partName}"]`);
+                if (part) {
+                    updatePartColor(part, value);
+                }
+            });
         });
 
         // Body part select dropdown
@@ -716,7 +864,7 @@
         // Save button
         document.getElementById('saveBtn').addEventListener('click', function() {
             if (!currentPerson) {
-                alert('先に人物を選択してください');
+                showNotification('先に人物を選択してください');
                 return;
             }
             
@@ -724,7 +872,7 @@
             savePersonsData();
             
             console.log(`Saved data for ${currentPerson}:`, painData);
-            alert(`${currentPerson}のデータを保存しました！\n保存データ数: ${Object.keys(painData).length}件`);
+            showNotification(`${currentPerson}のデータを保存しました！（${Object.keys(painData).length}件）`);
         });
 
         // Clear button
@@ -738,7 +886,7 @@
                 document.getElementById('painSlider').value = 0;
                 document.getElementById('painValue').textContent = '0';
                 document.getElementById('bodyPartSelect').value = '';
-                selectedPart = null;
+                selectedParts.clear();
                 console.log('Data cleared:', painData);
             }
         });
