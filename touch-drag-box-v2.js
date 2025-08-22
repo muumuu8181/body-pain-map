@@ -1,4 +1,5 @@
 // iPhoneでドラッグ選択ボックス - 複数選択モード時のみ有効版
+// Version: 0.30 - 複数選択モード時のみドラッグ、モードボタン上部配置
 
 // 画面サイズ表示
 function updateScreenSize() {
@@ -11,7 +12,7 @@ function updateScreenSize() {
         else if (width <= 768) deviceType = 'Mobile';
         else if (width <= 1024) deviceType = 'Tablet';
         
-        screenSize.innerHTML = `📀 ${width} × ${height}px (${deviceType})`;
+        screenSize.innerHTML = `📀 ${width} × ${height}px (${deviceType}) | v0.30`;
     }
 }
 
