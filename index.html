@@ -103,7 +103,7 @@
             height: 40px;
             -webkit-appearance: none;
             appearance: none;
-            background: linear-gradient(90deg, #4CAF50 0%, #FFEB3B 50%, #FF5722 100%);
+            background: linear-gradient(90deg, #ffcccc 0%, #ff6666 50%, #cc0000 100%);
             border-radius: 20px;
             outline: none;
             opacity: 0.9;
@@ -385,15 +385,15 @@
 
                 <div class="legend">
                     <div class="legend-item">
-                        <div class="legend-color" style="background: #4CAF50;"></div>
+                        <div class="legend-color" style="background: #ffcccc;"></div>
                         <span>弱い (0-3)</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color" style="background: #FFEB3B;"></div>
+                        <div class="legend-color" style="background: #ff6666;"></div>
                         <span>中程度 (4-7)</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color" style="background: #FF5722;"></div>
+                        <div class="legend-color" style="background: #cc0000;"></div>
                         <span>強い (8-10)</span>
                     </div>
                 </div>
@@ -551,12 +551,12 @@
             let color;
             if (painLevel === 0) {
                 color = '#f0f0f0';
-            } else if (painLevel <= 3) {
-                color = `rgba(76, 175, 80, ${0.3 + (painLevel / 3) * 0.7})`;
-            } else if (painLevel <= 7) {
-                color = `rgba(255, 235, 59, ${0.3 + ((painLevel - 3) / 4) * 0.7})`;
             } else {
-                color = `rgba(255, 87, 34, ${0.3 + ((painLevel - 7) / 3) * 0.7})`;
+                // 赤色の単一グラデーション（透明度と強度で調整）
+                const intensity = painLevel / 10;
+                const red = Math.floor(255 - (100 * (1 - intensity)));
+                const alpha = 0.2 + (intensity * 0.8);
+                color = `rgba(${red}, 0, 0, ${alpha})`;
             }
             element.style.fill = color;
         }
@@ -565,8 +565,10 @@
         document.getElementById('saveBtn').addEventListener('click', function() {
             const mapData = {
                 timestamp: new Date().toISOString(),
-                data: painData
+                data: {...painData}  // データのコピーを保存
             };
+            
+            console.log('Saving data:', mapData);
             
             let savedMaps = JSON.parse(localStorage.getItem('painMaps') || '[]');
             savedMaps.unshift(mapData);
@@ -574,15 +576,19 @@
             savedMaps = savedMaps.slice(0, 10);
             localStorage.setItem('painMaps', JSON.stringify(savedMaps));
             
+            // 保存成功を確認
+            const saved = localStorage.getItem('painMaps');
+            console.log('Data saved to localStorage:', saved);
+            
             loadSavedMaps();
-            alert('痛みマップを保存しました！');
+            alert('痛みマップを保存しました！\n保存データ数: ' + Object.keys(painData).length + '件');
         });
 
         // Clear button
         document.getElementById('clearBtn').addEventListener('click', function() {
             if (confirm('すべての痛みデータをクリアしますか？')) {
                 painData = {};
-                document.querySelectorAll('.body-part').forEach(part => {
+                document.querySelectorAll('.body-part, .head-cell').forEach(part => {
                     part.style.fill = '#f0f0f0';
                     part.classList.remove('selected');
                 });
@@ -590,6 +596,7 @@
                 document.getElementById('painValue').textContent = '0';
                 document.getElementById('bodyPartSelect').value = '';
                 selectedPart = null;
+                console.log('Data cleared:', painData);
             }
         });
 
@@ -613,11 +620,12 @@
 
         function loadMap(data) {
             painData = data;
-            document.querySelectorAll('.body-part').forEach(part => {
+            document.querySelectorAll('.body-part, .head-cell').forEach(part => {
                 const partName = part.dataset.part;
                 const painLevel = data[partName] || 0;
                 updatePartColor(part, painLevel);
             });
+            console.log('Map loaded:', data);
         }
 
         function initializeEventListeners() {
